@@ -1,5 +1,4 @@
 # nestjs-little-pino 🌲
-
 <!--toc:start-->
 - [nestjs-little-pino 🌲](#nestjs-little-pino-🌲)
   - [Installation](#installation)
@@ -11,13 +10,16 @@
   - [Customizing Request and Response Bodies with @TransformBodyLog](#customizing-request-and-response-bodies-with-transformbodylog)
     - [The BodyLogTransformer Abstraction](#the-bodylogtransformer-abstraction)
       - [Example](#example)
+  - [The default instrumentation](#the-default-instrumentation)
 <!--toc:end-->
 
-> A small, opinionated wrapper for `nestjs-pino` with sane defaults and OpenTelemetry (OTel) integration out of the box.
+I'm lazy, and sometimes I just want my structured logs to work out-of-the-box
+without any tinkering or major configurations. This library aims to enforce an
+opinionated standard schema for all logs produced inside your application,
+powered by the amazing Pino
 
-I'm lazy, and sometimes I just want my structured logs to work out-of-the-box without any tinkering or major configurations. This library aims to enforce an opinionated standard schema for all logs produced inside your application, powered by the amazing Pino
-
-The library is aimed not to be extensible, but to be easy to use, just register the module, give some configurations and that is it !
+The library is aimed not to be extensible, but to be easy to use, just register
+the module, give some configurations and that is it !
 
 ## Installation
 
@@ -29,7 +31,9 @@ pnpm add nestjs-little-pino
 
 ## Quick Start
 
-1. Register the Module `LoggerModule` in your `AppModule`.
+Firstly, register the Module `LoggerModule` in your `AppModule`, either using:
+
+- `LoggerModule.forRoot()`
 
 ```typescript
 // src/app.module.ts
@@ -38,23 +42,13 @@ import { LoggerModule } from 'nestjs-little-pino';
 
 @Module({
   imports: [
-    LoggerModule.forRoot({
-      serviceName: 'my-service',
-      redact: {
-        fields: [
-          'http.req.headers.authorization',
-          'http.req.body.*.password',
-          'http.req.body.*.otp',
-        ],
-        remove: true,
-      }
-    }),
+    LoggerModule.forRoot({...}),
   ],
 })
 export class AppModule {}
 ```
 
-or, if you prefer to load async:
+- `LoggerModule.forRootAsync()`
 
 ```typescript
 @Module({
@@ -63,19 +57,8 @@ or, if you prefer to load async:
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        return {
-          prettify: true,
-          serviceName: config.getOrThrow('PROJECT_NAME'),
-          version: config.getOrThrow('PROJECT_VERSION'),
-          environment: config.getOrThrow('NODE_ENV'),
-          idField: 'x-request-id',
-          redact: {
-            fields: [
-              'http.req.headers.authorization',
-              'http.req.body.*.password',
-              'http.req.body.*.otp',
-            ],
-          },
+      return {
+          ...
         };
       },
     })
@@ -84,9 +67,8 @@ export class AppModule {}
 
 ```
 
-2. Configure your `main.ts`
-
-To ensure startup logs (like "NestFactory starting...") are formatted correctly, you must enable log buffering and attach the logger manually.
+Secondly, configure your `main.ts` to ensure that startup logs are formatted and
+NestJS register the logger as default
 
 ```typescript
 // src/main.ts
@@ -105,7 +87,7 @@ bootstrap();
 
 ## The log structure
 
-All logs are wrapped into a standard structure:
+All logs are wrapped into the following structure:
 
 ```json
 {
@@ -135,9 +117,9 @@ You can give the following configurations to the `LoggerModule`
 | environment | string | Service environment  | `development` |
 | serviceName | string | Name of the service  | `""` |
 | prettify    | boolean | If logs should be prettified by `pino-pretty` | `false` |
-| version     | string  | Service version | `v0.0.0`
+| version     | string  | Service version | `v0.0.0` |
 | idField     | string  | For projects that uses headers with "distributed IDs". Used to track logs across multiple projects | `x-request-id` |
-| ignorePaths | Array<string | Regexp> | Paths that sould be ignored by the interceptor | `[]` |
+| ignorePaths | Array<string / Regexp> | Paths that sould be ignored by the interceptor | `[]` |
 | redact.fields | Array<string> | Pino native [redaction](https://github.com/pinojs/pino/blob/main/docs/redaction.md) | `[]` |
 | redact.remove | boolean | If fields should be removed from the payload | `false` |
 | redact.censorString | string | String that will be used to censor the value | `***` |
@@ -151,7 +133,8 @@ You can also use the following environment variables to dynamically setup the lo
 | variable | value | description |
 | -------------- | --------------- | --------------- |
 | LOG_LEVEL | LogLevel | Overrides the log level of the application |
-|  DISABLE_PINO_INTERCEPTOR | string | If the interceptor should be disabled |
+| DISABLE_PINO_INTERCEPTOR | string | If the interceptor should be disabled |
+| INSTRUMENTATION_ENABLED | string | "true" to enable the library OTel [intrumentation](#the-default-instrumentation) |
 
 ## The HTTP interceptor
 
@@ -258,10 +241,14 @@ An example of formatted log:
 
 ## Customizing Request and Response Bodies with @TransformBodyLog
 
-Sometimes, you don't need to send the entire request payload to your logging tool. Removing unnecessary content and keeping only the essentials can significantly reduce data ingestion and indexing costs.
+Sometimes, you don't need to send the entire request payload to your logging tool.
+Removing unnecessary content and keeping only the essentials can significantly
+reduce data ingestion and indexing costs.
 
-To apply these transformations, you can use the `@TransformBodyLog()` decorator on a Controller route. This decorator registers a specific function for that route.
-Whenever a request is handled, the transformer function is executed before the log is generated, allowing you to modify the http.req.body or http.res.body.
+To apply these transformations, you can use the `@TransformBodyLog()` decorator
+on a Controller route. This decorator registers a specific function for that route.
+Whenever a request is handled, the transformer function is executed before the
+log is generated, allowing you to modify the `http.req.body` or `http.res.body`.
 
 ### The BodyLogTransformer Abstraction
 
@@ -283,11 +270,13 @@ export abstract class BodyLogTransformer<Req = any, Res = any> {
 }
 ```
 
-- Note: The generic types are optional and serve only to assist IntelliSense while writing transformers.
+- Note: The generic types are optional and serve only to assist IntelliSense while
+writing transformers.
 
-The `transformRequest`, `transformResponse`, and `skip` methods are optional; implement only the ones you need.
+The `transformRequest`, `transformResponse`, and `skip` methods are optional;
+implement only the ones you need.
 
-Finally, decorate your endpoint using @TransformBodyLog(YourTransformerClass).
+Finally, decorate your endpoint using `@TransformBodyLog(YourTransformerClass)`.
 
 #### Example
 
@@ -314,10 +303,10 @@ export class TestResponseDTO {
 }
 
 @Controller()
-export class TesteController {
-  @Post('/teste')
+export class TestController {
+  @Post('/test')
   @TransformBodyLog(TestLoggerTransformer)
-  async teste(@Body() request: MyRequestDTO): Promise<TesteResponseDTO> {
+  async teste(@Body() request: MyRequestDTO): Promise<TestResponseDTO> {
     return {
       isValid: false,
       myObject: {
@@ -328,3 +317,26 @@ export class TesteController {
   }
 }
 ```
+
+## The default instrumentation
+
+By default, the library provides an out-of-the-box configured Open Telemetry instrumentation
+
+To use it, you
+
+- First: set the environment variable `INSTRUMENTATION_ENABLED` to `true`
+- Second: Use the `--require` flag on NodeJS
+
+``` bash
+node -r nestjs-little-pino/instrumentation dist/main
+
+#OR
+
+NODE_OPTIONS='--require nestjs-little-pino/instrumentation' && npm start
+```
+
+## CREDITS
+
+- [Pino](https://github.com/pinojs/pino)
+- [nestjs-pino](https://github.com/iamolegga/nestjs-pino)
+- [NestJS](https://github.com/nestjs/nest)

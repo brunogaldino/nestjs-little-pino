@@ -4,6 +4,9 @@
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "scripts": {
     "test": "jest --runInBand",
     "build": "rimraf dist && tsc -p tsconfig.build.json",
@@ -12,9 +15,17 @@
     "test:cov": "jest --coverage",
     "prepare": "husky install"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "exports": {
+    ".": "./dist/index.js",
+    "./instrumentation": "./dist/instrumentation.js"
+  },
+  "typesVersions": {
+    "*": {
+      "instrumentation": [
+        "dist/instrumentation.d.ts"
+      ]
+    }
+  },
   "packageManager": "pnpm@10.20.0",
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -48,9 +48,9 @@ export class LoggerInterceptor implements NestInterceptor {
           const log = this.logRequest(context, response, endTime - beginTime);
 
           if (log) {
-            if (log.http?.status_code >= 500) {
+            if (log.msg?.status_code >= 500) {
               this.logger.error(log);
-            } else if (log.http?.status_code >= 400) {
+            } else if (log.msg?.status_code >= 400) {
               this.logger.warn(log);
             } else {
               this.logger.info(log);
@@ -67,10 +67,10 @@ export class LoggerInterceptor implements NestInterceptor {
           const log = this.logRequest(context, err, endTime - beginTime);
 
           if (log) {
-            if (log.http?.status_code >= 400 && log.http?.status_code <= 499) {
-              this.logger.warn(log, url);
+            if (log.msg?.status_code >= 400 && log.msg?.status_code <= 499) {
+              this.logger.warn(log);
             } else {
-              this.logger.error(log, url);
+              this.logger.error(log);
             }
           }
 
@@ -141,7 +141,7 @@ export class LoggerInterceptor implements NestInterceptor {
     const output: HttpLog = {
       duration: Math.trunc(elapsedTimeMs),
       title: `[REQUEST] [${httpRequest.method as any}] [${httpRequest.route.path}]`,
-      http: {
+      msg: {
         url_details: {
           full: httpRequest.originalUrl,
           path: httpRequest.route.path,
@@ -171,18 +171,18 @@ export class LoggerInterceptor implements NestInterceptor {
     }
 
     if (dataResponse instanceof HttpException)
-      output.http.res['rawException'] = dataResponse;
+      output.msg.res['rawException'] = dataResponse;
 
     if (transformRequestException) {
-      output.http.req['transformError'] = transformRequestException?.message;
+      output.msg.req['transformError'] = transformRequestException?.message;
     }
 
     if (transformResponseException) {
-      output.http.res['transformError'] = transformResponseException?.message;
+      output.msg.res['transformError'] = transformResponseException?.message;
     }
 
     if (skipException) {
-      output.http['skipError'] = skipException?.message;
+      output.msg['skipError'] = skipException?.message;
     }
 
     return output;

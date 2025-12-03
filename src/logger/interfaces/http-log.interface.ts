@@ -2,7 +2,7 @@ export interface HttpLog {
   requestId?: number | string;
   duration?: number;
   title: string;
-  http: {
+  msg: {
     method: string;
     url: string;
     version: string;

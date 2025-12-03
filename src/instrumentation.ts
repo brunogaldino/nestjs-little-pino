@@ -107,5 +107,3 @@ if (process.env?.INSTRUMENTATION_ENABLED == 'true') {
     process.env?.INSTRUMENTATION_ENABLED ?? false,
   );
 }
-
-export default sdk
