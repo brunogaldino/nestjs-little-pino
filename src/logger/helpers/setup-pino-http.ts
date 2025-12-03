@@ -1,15 +1,20 @@
 import { context, trace } from "@opentelemetry/api";
 import { randomUUID } from "crypto";
+import os from 'os';
 import { LoggerOptions } from "../@types/logger-option.type";
 import { PinoOtelSeverity } from "../consts/pino-otel-severity.const";
+import { LoggerInterceptor } from "../logger.interceptor";
 import { deepMerge } from "./deep-merge";
-import os from 'os'
+import { LogLevel } from "../enums/log-level.enum";
 
 const defaultOptions: LoggerOptions = {
+  level: LogLevel.INFO,
   environment: 'development',
   serviceName: '',
   idField: 'x-request-id',
   version: 'v0.0.0',
+  prettify: false,
+  ignorePaths: [],
   redact: {
     fields: [],
     remove: false
@@ -18,7 +23,13 @@ const defaultOptions: LoggerOptions = {
 
 export function setupPinoHTTP(opts: LoggerOptions) {
   const config: LoggerOptions = deepMerge({}, defaultOptions, opts);
+  if (process.env.LOG_LEVEL)
+    config.level == process.env.LOG_LEVEL.toLowerCase()
+
+  LoggerInterceptor.ignorePaths = config.ignorePaths;
+
   return {
+    level: config.level,
     base: {
       env: config.environment,
       service: config.serviceName,

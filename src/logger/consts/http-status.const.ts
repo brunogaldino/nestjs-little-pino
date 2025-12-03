@@ -1,4 +1,4 @@
-const httpStatusMap = new Map<number, string>([
+export const httpStatusMap = new Map<number, string>([
   [100, 'Continue'],
   [101, 'Switching Protocols'],
   [102, 'Processing'],

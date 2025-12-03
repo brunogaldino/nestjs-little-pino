@@ -1,4 +1,4 @@
-import { HTTPLoggerInterceptor } from "./logger.interceptor";
+import { LoggerInterceptor } from "./logger.interceptor";
 
 export function TransformBodyLog(transform: new () => BodyLogTransformer) {
   return function (
@@ -6,7 +6,7 @@ export function TransformBodyLog(transform: new () => BodyLogTransformer) {
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-    HTTPLoggerInterceptor.registeredTransformers.set(
+    LoggerInterceptor.registeredTransformers.set(
       `${target.constructor.name}-${propertyKey}`,
       new transform(),
     );

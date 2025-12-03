@@ -1,8 +1,7 @@
 export interface HttpLog {
-  title?: string;
   requestId?: number | string;
   duration?: number;
-  message: string;
+  title: string;
   http: {
     method: string;
     url: string;

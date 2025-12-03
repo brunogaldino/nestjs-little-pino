@@ -3,24 +3,25 @@ import {
   ExecutionContext,
   HttpException,
   Injectable,
-  Logger,
-  NestInterceptor,
+  NestInterceptor
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { httpStatusMap } from './consts/http-status.const';
 import { HttpLog } from './interfaces/http-log.interface';
 import { BodyLogTransformer } from './logger-transformer.decorator';
 
 @Injectable()
-export class HTTPLoggerInterceptor implements NestInterceptor {
-  private logger = new Logger('HTTP');
+export class LoggerInterceptor implements NestInterceptor {
   static registeredTransformers = new Map<string, BodyLogTransformer>();
+  static ignorePaths: (string | RegExp)[] = [];
 
-  constructor(ignorePaths: Array<string | RegExp> | undefined) {
-    this.ignorePaths = ignorePaths ?? [];
-  }
-  private readonly ignorePaths: (string | RegExp)[];
+  constructor(
+    @InjectPinoLogger('HTTP')
+    private readonly logger: PinoLogger,
+  ) { }
 
   async intercept(
     context: ExecutionContext,
@@ -32,7 +33,7 @@ export class HTTPLoggerInterceptor implements NestInterceptor {
 
     const shouldIgnoreLog =
       contextType === 'http' &&
-      this.ignorePaths.find((pathToIgnore) => {
+      LoggerInterceptor.ignorePaths.find((pathToIgnore) => {
         if (pathToIgnore instanceof RegExp) {
           return pathToIgnore.test(url.toUpperCase());
         }
@@ -52,7 +53,7 @@ export class HTTPLoggerInterceptor implements NestInterceptor {
             } else if (log.http?.status_code >= 400) {
               this.logger.warn(log);
             } else {
-              this.logger.log(log);
+              this.logger.info(log);
             }
           }
         }
@@ -94,7 +95,7 @@ export class HTTPLoggerInterceptor implements NestInterceptor {
     const ctxClass = context.getClass().name;
     const ctxMethod = context['handler'].name;
 
-    const transformer = HTTPLoggerInterceptor.registeredTransformers.get(
+    const transformer = LoggerInterceptor.registeredTransformers.get(
       `${ctxClass}-${ctxMethod}`,
     );
 
@@ -138,8 +139,8 @@ export class HTTPLoggerInterceptor implements NestInterceptor {
     }
 
     const output: HttpLog = {
-      duration: elapsedTimeMs,
-      message: `[REQUEST] [${httpRequest.method as any}] [${httpRequest.route.path}]`,
+      duration: Math.trunc(elapsedTimeMs),
+      title: `[REQUEST] [${httpRequest.method as any}] [${httpRequest.route.path}]`,
       http: {
         url_details: {
           full: httpRequest.originalUrl,
@@ -186,18 +187,5 @@ export class HTTPLoggerInterceptor implements NestInterceptor {
 
     return output;
   }
-
-  // private removeBaseUrl(value: any): any {
-  //   if (
-  //     value &&
-  //     typeof value === 'object' &&
-  //     'next' in value &&
-  //     value['next']
-  //   ) {
-  //     value['next'] = (value['next'] as string)?.replace(this.BASE_URL, '');
-  //   }
-  //
-  //   return value;
-  // }
 }
 
