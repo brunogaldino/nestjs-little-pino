@@ -16,8 +16,6 @@ import { BodyLogTransformer } from './logger-transformer.decorator';
 export class HTTPLoggerInterceptor implements NestInterceptor {
   private logger = new Logger('HTTP');
   static registeredTransformers = new Map<string, BodyLogTransformer>();
-  // private readonly BASE_URL =
-  //   'http://banking-app.banking-app.svc.cluster.local';
 
   constructor(ignorePaths: Array<string | RegExp> | undefined) {
     this.ignorePaths = ignorePaths ?? [];
@@ -28,11 +26,7 @@ export class HTTPLoggerInterceptor implements NestInterceptor {
     context: ExecutionContext,
     next: CallHandler,
   ): Promise<Observable<any>> {
-    // const httpContext: HttpArgumentsHost = context.switchToHttp();
     const beginTime = performance.now();
-    // const correlationId: string =
-    //   httpContext.getRequest().headers['x-request-id'] ?? randomUUID();
-
     const { contextType } = context as any;
     const url: string = context.switchToHttp().getRequest().route.path;
 
